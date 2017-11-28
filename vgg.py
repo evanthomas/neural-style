@@ -40,6 +40,9 @@ def net_preloaded(weights, input_image, pooling):
             kernels = np.transpose(kernels, (1, 0, 2, 3))
             bias = bias.reshape(-1)
             current = _conv_layer(current, kernels, bias)
+            flattenSortAndPrint(kernels, "../kernels-python.txt")
+            import sys
+            sys.exit(0)
         elif kind == 'relu':
             current = tf.nn.relu(current)
         elif kind == 'pool':
@@ -69,3 +72,10 @@ def preprocess(image, mean_pixel):
 
 def unprocess(image, mean_pixel):
     return image + mean_pixel
+
+def flattenSortAndPrint(a, fn):
+    f = open(fn, 'w')
+#    for x in sorted(a.flatten().tolist()):
+    for x in a.flatten().tolist():
+     f.write('%2.8f\n' % x)
+    f.close()

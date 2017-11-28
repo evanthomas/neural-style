@@ -57,6 +57,10 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         image = tf.placeholder('float', shape=shape)
         net = vgg.net_preloaded(vgg_weights, image, pooling)
         content_pre = np.array([vgg.preprocess(content, vgg_mean_pixel)])
+        x = net['conv1_1']
+        flattenSortAndPrint(x.eval(feed_dict={image: content_pre}), "../net-python.txt")
+        import sys
+        sys.exit(0)
         for layer in CONTENT_LAYERS:
             content_features[layer] = net[layer].eval(feed_dict={image: content_pre})
 
@@ -141,6 +145,9 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             stderr.write('Optimization started...\n')
+            print_progress()
+            import sys
+            sys.exit(0)
             if (print_iterations and print_iterations != 0):
                 print_progress()
             for i in range(iterations):
@@ -209,3 +216,9 @@ def gray2rgb(gray):
     rgb = np.empty((w, h, 3), dtype=np.float32)
     rgb[:, :, 2] = rgb[:, :, 1] = rgb[:, :, 0] = gray
     return rgb
+
+def flattenSortAndPrint(a, fn):
+    f = open(fn, 'w')
+    for x in sorted(a.flatten().tolist()):
+        f.write('%2.8f\n' % x)
+    f.close()
