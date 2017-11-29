@@ -4,3 +4,4 @@ env/
 __pycache__
 *.pyc
 *.jpg
+imagenet-vgg-verydeep-19.mat

@@ -40,7 +40,7 @@ def net_preloaded(weights, input_image, pooling):
             kernels = np.transpose(kernels, (1, 0, 2, 3))
             bias = bias.reshape(-1)
             current = _conv_layer(current, kernels, bias)
-            flattenSortAndPrint(kernels, "../kernels-python.txt")
+            dumpKernels(kernels)
             import sys
             sys.exit(0)
         elif kind == 'relu':
@@ -78,4 +78,23 @@ def flattenSortAndPrint(a, fn):
 #    for x in sorted(a.flatten().tolist()):
     for x in a.flatten().tolist():
      f.write('%2.8f\n' % x)
+    f.close()
+
+def dumpKernels(kernels):
+    (l0, l1, l2, l3) = kernels.shape
+
+    f = open('../kernels-python.txt', 'w')
+
+    for i3 in range(l3):
+        for i2 in range(l2):
+            f.write('val(:,:,%d,%d) = \n\n' % (i2, i3))
+
+            for i1 in range(l1):
+                for i0 in range(l0):
+                    x = kernels[i0][i1][i2][i3]
+                    f.write('   %2.4f ' % x)
+                f.write('\n')
+
+            f.write('\n\n\n')
+
     f.close()
