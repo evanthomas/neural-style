@@ -1,5 +1,3 @@
-# Copyright (c) 2015-2017 Anish Athalye. Released under GPLv3.
-
 import vgg
 
 import tensorflow as tf
@@ -24,11 +22,9 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         print_iterations=None, checkpoint_iterations=None):
     """
     Stylize images.
-
     This function yields tuples (iteration, image); `iteration` is None
     if this is the final image (the last iteration).  Other tuples are yielded
     every `checkpoint_iterations` iterations.
-
     :rtype: iterator[tuple[int|None,image]]
     """
     shape = (1,) + content.shape
@@ -57,10 +53,6 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         image = tf.placeholder('float', shape=shape)
         net = vgg.net_preloaded(vgg_weights, image, pooling)
         content_pre = np.array([vgg.preprocess(content, vgg_mean_pixel)])
-        x = net['conv1_1']
-        flattenSortAndPrint(x.eval(feed_dict={image: content_pre}), "../net-python.txt")
-        import sys
-        sys.exit(0)
         for layer in CONTENT_LAYERS:
             content_features[layer] = net[layer].eval(feed_dict={image: content_pre})
 
@@ -83,7 +75,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     with tf.Graph().as_default():
         if initial is None:
             noise = np.random.normal(size=shape, scale=np.std(content) * 0.1)
-            initial = tf.random_normal(shape) * 0.256
+            initial = tf.zeros(shape) * 0.256
         else:
             initial = np.array([vgg.preprocess(initial, vgg_mean_pixel)])
             initial = initial.astype('float32')
@@ -120,15 +112,15 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
 
         # total variation denoising
-        tv_y_size = _tensor_size(image[:,1:,:,:])
-        tv_x_size = _tensor_size(image[:,:,1:,:])
-        tv_loss = tv_weight * 2 * (
-                (tf.nn.l2_loss(image[:,1:,:,:] - image[:,:shape[1]-1,:,:]) /
-                    tv_y_size) +
-                (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) /
-                    tv_x_size))
+        # tv_y_size = _tensor_size(image[:,1:,:,:])
+        # tv_x_size = _tensor_size(image[:,:,1:,:])
+        # tv_loss = tv_weight * 2 * (
+        #         (tf.nn.l2_loss(image[:,1:,:,:] - image[:,:shape[1]-1,:,:]) /
+        #             tv_y_size) +
+        #         (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) /
+        #             tv_x_size))
         # overall loss
-        loss = content_loss + style_loss + tv_loss
+        loss = content_loss + style_loss #+ tv_loss
 
         # optimizer setup
         train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)
@@ -136,7 +128,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         def print_progress():
             stderr.write('  content loss: %g\n' % content_loss.eval())
             stderr.write('    style loss: %g\n' % style_loss.eval())
-            stderr.write('       tv loss: %g\n' % tv_loss.eval())
+            # stderr.write('       tv loss: %g\n' % tv_loss.eval())
             stderr.write('    total loss: %g\n' % loss.eval())
 
         # optimization
@@ -145,9 +137,6 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             stderr.write('Optimization started...\n')
-            print_progress()
-            import sys
-            sys.exit(0)
             if (print_iterations and print_iterations != 0):
                 print_progress()
             for i in range(iterations):
@@ -204,6 +193,8 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
                     )
 
 
+
+
 def _tensor_size(tensor):
     from operator import mul
     return reduce(mul, (d.value for d in tensor.get_shape()), 1)
@@ -219,6 +210,10 @@ def gray2rgb(gray):
 
 def flattenSortAndPrint(a, fn):
     f = open(fn, 'w')
-    for x in sorted(a.flatten().tolist()):
+    for x in a.flatten().tolist():
         f.write('%2.8f\n' % x)
     f.close()
+
+def e():
+    import sys
+    sys.exit(0)
