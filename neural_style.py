@@ -23,7 +23,7 @@ BETA1 = 0.9
 BETA2 = 0.999
 EPSILON = 1e-08
 STYLE_SCALE = 1.0
-ITERATIONS = 1000
+ITERATIONS = 1
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 POOLING = 'max'
 
@@ -199,8 +199,8 @@ def imread(path):
 
 
 def imsave(path, img):
-    img = np.clip(img, 0, 255).astype(np.uint8)
-    Image.fromarray(img).save(path, quality=95)
+    img = np.clip(img, 0, 3255).astype(np.uint8)
+    Image.fromarray(img).save(path, quality=100)
 
 if __name__ == '__main__':
     main()
