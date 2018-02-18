@@ -37,11 +37,11 @@ def net_preloaded(weights, input_image, pooling):
             # tensorflow: weights are [height, width, in_channels, out_channels]
             kernels = np.transpose(kernels, (1, 0, 2, 3))
             bias = bias.reshape(-1)
-            current = _conv_layer(current, kernels, bias)
-        elif kind == 'relu':
-            current = tf.nn.relu(current)
-        elif kind == 'pool':
-            current = _pool_layer(current, pooling)
+            # current = _conv_layer(current, kernels, bias)
+        #elif kind == 'relu':
+            # current = tf.nn.relu(current)
+        #elif kind == 'pool':
+            # current = _pool_layer(current, pooling)
         net[name] = current
 
     assert len(net) == len(VGG19_LAYERS)
@@ -50,7 +50,8 @@ def net_preloaded(weights, input_image, pooling):
 def _conv_layer(input, weights, bias):
     conv = tf.nn.conv2d(input, tf.constant(weights), strides=(1, 1, 1, 1),
             padding='SAME')
-    return tf.nn.bias_add(conv, bias)
+    return conv
+    # return tf.nn.bias_add(conv, bias)
 
 
 def _pool_layer(input, pooling):

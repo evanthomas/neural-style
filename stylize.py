@@ -7,7 +7,7 @@ from sys import stderr
 
 from PIL import Image
 
-CONTENT_LAYERS = ('relu4_2', 'relu5_2')
+CONTENT_LAYERS = ('relu1_1',) #, 'relu5_2')
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 
 try:
@@ -86,6 +86,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
 
         # content loss
         content_layers_weights = {}
+        content_layers_weights['relu1_1'] = content_weight_blend
         content_layers_weights['relu4_2'] = content_weight_blend
         content_layers_weights['relu5_2'] = 1.0 - content_weight_blend
 
@@ -120,7 +121,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         #         (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) /
         #             tv_x_size))
         # overall loss
-        loss = content_loss + style_loss #+ tv_loss
+        loss = content_loss #+ style_loss #+ tv_loss
 
         # optimizer setup
         train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)
