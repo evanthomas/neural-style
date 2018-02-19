@@ -7,8 +7,7 @@ from sys import stderr
 
 from PIL import Image
 
-CONTENT_LAYERS = ('relu1_1',)
-# CONTENT_LAYERS = ('relu4_2', 'relu5_2')
+CONTENT_LAYERS = ('relu1_1',) #, 'relu5_2')
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 
 try:
@@ -60,15 +59,15 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     # compute style features in feedforward mode
     for i in range(len(styles)):
         g = tf.Graph()
-        # with g.as_default(), g.device('/cpu:0'), tf.Session() as sess:
-        #     image = tf.placeholder('float', shape=style_shapes[i])
-        #     net = vgg.net_preloaded(vgg_weights, image, pooling)
-        #     style_pre = np.array([vgg.preprocess(styles[i], vgg_mean_pixel)])
-        #     for layer in STYLE_LAYERS:
-        #         features = net[layer].eval(feed_dict={image: style_pre})
-        #         features = np.reshape(features, (-1, features.shape[3]))
-        #         gram = np.matmul(features.T, features) / features.size
-        #         style_features[i][layer] = gram
+        with g.as_default(), g.device('/cpu:0'), tf.Session() as sess:
+            image = tf.placeholder('float', shape=style_shapes[i])
+            net = vgg.net_preloaded(vgg_weights, image, pooling)
+            style_pre = np.array([vgg.preprocess(styles[i], vgg_mean_pixel)])
+            for layer in STYLE_LAYERS:
+                features = net[layer].eval(feed_dict={image: style_pre})
+                features = np.reshape(features, (-1, features.shape[3]))
+                gram = np.matmul(features.T, features) / features.size
+                style_features[i][layer] = gram
 
     initial_content_noise_coeff = 1.0 - initial_noiseblend
 
@@ -82,15 +81,8 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             initial = initial.astype('float32')
             noise = np.random.normal(size=shape, scale=np.std(content) * 0.1)
             initial = (initial) * initial_content_noise_coeff + (tf.random_normal(shape) * 0.256) * (1.0 - initial_content_noise_coeff)
-        image = tf.Variable(np.array(content_pre, 'float32'))
-        # image = tf.Variable(initial)
+        image = tf.Variable(initial)
         net = vgg.net_preloaded(vgg_weights, image, pooling)
-
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            crap = sess.run(fetches=net['conv1_1'])
-            flattenSortAndPrint(crap, '../python.txt')
-            e()
 
         # content loss
         content_layers_weights = {}
@@ -107,18 +99,18 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         content_loss += reduce(tf.add, content_losses)
 
         # style loss
-        # style_loss = 0
-        # for i in range(len(styles)):
-        #     style_losses = []
-        #     for style_layer in STYLE_LAYERS:
-        #         layer = net[style_layer]
-        #         _, height, width, number = map(lambda i: i.value, layer.get_shape())
-        #         size = height * width * number
-        #         feats = tf.reshape(layer, (-1, number))
-        #         gram = tf.matmul(tf.transpose(feats), feats) / size
-        #         style_gram = style_features[i][style_layer]
-        #         style_losses.append(style_layers_weights[style_layer] * 2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
-        #     style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
+        style_loss = 0
+        for i in range(len(styles)):
+            style_losses = []
+            for style_layer in STYLE_LAYERS:
+                layer = net[style_layer]
+                _, height, width, number = map(lambda i: i.value, layer.get_shape())
+                size = height * width * number
+                feats = tf.reshape(layer, (-1, number))
+                gram = tf.matmul(tf.transpose(feats), feats) / size
+                style_gram = style_features[i][style_layer]
+                style_losses.append(style_layers_weights[style_layer] * 2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
+            style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
 
         # total variation denoising
         # tv_y_size = _tensor_size(image[:,1:,:,:])
@@ -131,14 +123,12 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         # overall loss
         loss = content_loss #+ style_loss #+ tv_loss
 
-
         # optimizer setup
-        train_step = tf.train.AdagradOptimizer(learning_rate).minimize(loss)
-        # train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)
+        train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)
 
         def print_progress():
-            # stderr.write('  content loss: %g\n' % content_loss.eval())
-            # stderr.write('    style loss: %g\n' % style_loss.eval())
+            stderr.write('  content loss: %g\n' % content_loss.eval())
+            stderr.write('    style loss: %g\n' % style_loss.eval())
             # stderr.write('       tv loss: %g\n' % tv_loss.eval())
             stderr.write('    total loss: %g\n' % loss.eval())
 
@@ -164,7 +154,6 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
                         best_loss = this_loss
                         best = image.eval()
 
-                    flattenSortAndPrint(best.reshape(shape[1:]), '../python.txt')
                     img_out = vgg.unprocess(best.reshape(shape[1:]), vgg_mean_pixel)
 
                     if preserve_colors and preserve_colors == True:
@@ -222,9 +211,7 @@ def gray2rgb(gray):
 
 def flattenSortAndPrint(a, fn):
     f = open(fn, 'w')
-    l = a.flatten().tolist()
-    # l.sort()
-    for x in l:
+    for x in a.flatten().tolist():
         f.write('%2.8f\n' % x)
     f.close()
 
