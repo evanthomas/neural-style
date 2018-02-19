@@ -112,28 +112,28 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
                 style_gram = style_features[i][style_layer]
                 style_losses.append(style_layers_weights[style_layer] * 2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
-
-        # total variation denoising
-        tv_y_size = _tensor_size(image[:,1:,:,:])
-        tv_x_size = _tensor_size(image[:,:,1:,:])
-        tv_loss = tv_weight * 2 * (
-                (tf.nn.l2_loss(image[:,1:,:,:] - image[:,:shape[1]-1,:,:]) /
-                    tv_y_size) +
-                (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) /
-                    tv_x_size))
+        #
+        # # total variation denoising
+        # tv_y_size = _tensor_size(image[:,1:,:,:])
+        # tv_x_size = _tensor_size(image[:,:,1:,:])
+        # tv_loss = tv_weight * 2 * (
+        #         (tf.nn.l2_loss(image[:,1:,:,:] - image[:,:shape[1]-1,:,:]) /
+        #             tv_y_size) +
+        #         (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) /
+        #             tv_x_size))
         # overall loss
-        loss = content_loss #+ style_loss + tv_loss
+        loss = content_loss + style_loss #+ tv_loss
 
         # optimizer setup
         train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)
 
         def print_progress():
-            stderr.write('  content loss: %g\n' % content_loss.eval())
-            stderr.write('    style loss: %g\n' % style_loss.eval())
+            stderr.write('%f\n' % content_loss.eval())
+            # stderr.write('    style loss: %g\n' % style_loss.eval())
             # stderr.write('       tv loss: %g\n' % tv_loss.eval())
-            stderr.write('    total loss: %g\n' % loss.eval())
+            # stderr.write('    total loss: %g\n' % loss.eval())
 
-        iterations = 20
+        iterations = 1000
         # optimization
         best_loss = float('inf')
         best = None
@@ -147,8 +147,8 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
                 train_step.run()
 
                 last_step = (i == iterations - 1)
-                if last_step or (print_iterations and i % print_iterations == 0):
-                    print_progress()
+                # if last_step or (print_iterations and i % print_iterations == 0):
+                print_progress()
 
                 if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
                     this_loss = loss.eval()
@@ -156,8 +156,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
                         best_loss = this_loss
                         best = image.eval()
 
-                    img_out = vgg.unprocess(best.reshape(shape[1:]), vgg_mean_pixel)
-                    flattenSortAndPrint(image.eval(), '../python.txt')
+                    img_out = vgg.unprocess(image.eval().reshape(shape[1:]), vgg_mean_pixel)
 
                     if preserve_colors and preserve_colors == True:
                         original_image = np.clip(content, 0, 255)
@@ -208,9 +207,13 @@ def gray2rgb(gray):
     rgb = np.empty((w, h, 3), dtype=np.float32)
     rgb[:, :, 2] = rgb[:, :, 1] = rgb[:, :, 0] = gray
     return rgb
+
+
 def flattenSortAndPrint(a, fn):
     f = open(fn, 'w')
-    for x in a.flatten().tolist():
+    l = a.flatten().tolist()
+    l.sort()
+    for x in l:
         f.write('%2.8f\n' % x)
     f.close()
 

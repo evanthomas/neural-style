@@ -204,9 +204,18 @@ def imread(path):
 
 
 def imsave(path, img):
-    img = np.clip(img, 0, 3255).astype(np.uint8)
+    img = np.clip(img, 0, 255).astype(np.uint8)
+    flattenSortAndPrint(img, '../python.txt')
     Image.fromarray(img).save(path, quality=100)
 
+
+def flattenSortAndPrint(a, fn):
+    f = open(fn, 'w')
+    l = a.flatten().tolist()
+    l.sort()
+    for x in l:
+        f.write('%2.8f\n' % x)
+    f.close()
 
 if __name__ == '__main__':
     main()

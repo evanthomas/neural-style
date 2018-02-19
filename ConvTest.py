@@ -94,8 +94,9 @@ def main():
         train_step = tf.train.AdamOptimizer(10).minimize(loss)
         sess.run(tf.global_variables_initializer())
 
-        train_step.run()
-        print("loss=%g" % loss.eval())
+        for i in range(1000):
+            train_step.run()
+            print("i=%d loss=%g" % (i, loss.eval()))
 
         img_out = unprocess(image_var.eval().reshape(shape[1:]), MEAN_PIXEL)
         flattenAndPrint(image_var.eval(), '../python.txt')
