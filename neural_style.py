@@ -23,10 +23,10 @@ BETA1 = 0.9
 BETA2 = 0.999
 EPSILON = 1e-08
 STYLE_SCALE = 1.0
-ITERATIONS = 1
+ITERATIONS = 1000
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 POOLING = 'max'
-
+PRINT_ITERATIONS = 100
 
 def build_parser():
     parser = ArgumentParser()
@@ -45,7 +45,7 @@ def build_parser():
                         metavar='ITERATIONS', default=ITERATIONS)
     parser.add_argument('--print-iterations', type=int,
                         dest='print_iterations', help='statistics printing frequency',
-                        metavar='PRINT_ITERATIONS')
+                        metavar='PRINT_ITERATIONS',default=PRINT_ITERATIONS)
     parser.add_argument('--checkpoint-output',
                         dest='checkpoint_output', help='checkpoint output format, e.g. output%%s.jpg',
                         metavar='OUTPUT')

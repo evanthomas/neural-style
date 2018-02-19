@@ -1,3 +1,5 @@
+# Copyright (c) 2015-2017 Anish Athalye. Released under GPLv3.
+
 import vgg
 
 import tensorflow as tf
@@ -7,7 +9,7 @@ from sys import stderr
 
 from PIL import Image
 
-CONTENT_LAYERS = ('relu1_1',) #, 'relu5_2')
+CONTENT_LAYERS = ('relu4_2', 'relu5_2')
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
 
 try:
@@ -86,7 +88,6 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
 
         # content loss
         content_layers_weights = {}
-        content_layers_weights['relu1_1'] = content_weight_blend
         content_layers_weights['relu4_2'] = content_weight_blend
         content_layers_weights['relu5_2'] = 1.0 - content_weight_blend
 
@@ -113,15 +114,15 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
 
         # total variation denoising
-        # tv_y_size = _tensor_size(image[:,1:,:,:])
-        # tv_x_size = _tensor_size(image[:,:,1:,:])
-        # tv_loss = tv_weight * 2 * (
-        #         (tf.nn.l2_loss(image[:,1:,:,:] - image[:,:shape[1]-1,:,:]) /
-        #             tv_y_size) +
-        #         (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) /
-        #             tv_x_size))
+        tv_y_size = _tensor_size(image[:,1:,:,:])
+        tv_x_size = _tensor_size(image[:,:,1:,:])
+        tv_loss = tv_weight * 2 * (
+                (tf.nn.l2_loss(image[:,1:,:,:] - image[:,:shape[1]-1,:,:]) /
+                    tv_y_size) +
+                (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) /
+                    tv_x_size))
         # overall loss
-        loss = content_loss #+ style_loss #+ tv_loss
+        loss = content_loss #+ style_loss + tv_loss
 
         # optimizer setup
         train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)
@@ -132,6 +133,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             # stderr.write('       tv loss: %g\n' % tv_loss.eval())
             stderr.write('    total loss: %g\n' % loss.eval())
 
+        iterations = 20
         # optimization
         best_loss = float('inf')
         best = None
@@ -141,7 +143,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             if (print_iterations and print_iterations != 0):
                 print_progress()
             for i in range(iterations):
-                stderr.write('Iteration %4d/%4d\n' % (i + 1, iterations))
+                # stderr.write('Iteration %4d/%4d\n' % (i + 1, iterations))
                 train_step.run()
 
                 last_step = (i == iterations - 1)
@@ -155,6 +157,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
                         best = image.eval()
 
                     img_out = vgg.unprocess(best.reshape(shape[1:]), vgg_mean_pixel)
+                    flattenSortAndPrint(image.eval(), '../python.txt')
 
                     if preserve_colors and preserve_colors == True:
                         original_image = np.clip(content, 0, 255)
@@ -187,13 +190,10 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
                         # 5
                         img_out = np.array(Image.fromarray(combined_yuv, 'YCbCr').convert('RGB'))
 
-
                     yield (
                         (None if last_step else i),
                         img_out
                     )
-
-
 
 
 def _tensor_size(tensor):
@@ -208,7 +208,6 @@ def gray2rgb(gray):
     rgb = np.empty((w, h, 3), dtype=np.float32)
     rgb[:, :, 2] = rgb[:, :, 1] = rgb[:, :, 0] = gray
     return rgb
-
 def flattenSortAndPrint(a, fn):
     f = open(fn, 'w')
     for x in a.flatten().tolist():

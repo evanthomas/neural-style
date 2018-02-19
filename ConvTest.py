@@ -12,11 +12,10 @@ learning_rate = 10
 beta1 = 0.9
 beta2 = 0.999
 epsilon = 1e-8
-MEAN_PIXEL = [103.939, 116.799, 123.68]
-
+MEAN_PIXEL = [116.799, 123.68, 103.939]
 
 def imread(path):
-    img = scipy.misc.imread(path).astype(np.float)
+    img = scipy.misc.imread(path).astype(np.float32)
     if len(img.shape) == 2:
         # grayscale
         img = np.dstack((img, img, img))
@@ -40,16 +39,16 @@ def load_net(data_path):
     weights = data['layers'][0]
     return weights, mean_pixel
 
+
 def net_preloaded(weights, input_image):
     kernels, _ = weights[0][0][0][0][0]
     kernels = np.transpose(kernels, (1, 0, 2, 3))
     net = _conv_layer(input_image, kernels)
-
     return net
 
 
 def _conv_layer(input, weights):
-    return tf.nn.conv2d(input, tf.constant(weights), strides=(1, 1, 1, 1), padding='SAME')
+    return tf.nn.conv2d(input, weights, strides=(1, 1, 1, 1), padding='SAME')
 
 
 def preprocess(image, mean_pixel):
@@ -60,15 +59,23 @@ def unprocess(image, mean_pixel):
     return image + mean_pixel
 
 
-def flattenSortAndPrint(a, fn):
+def flattenAndPrint(a, fn):
     f = open(fn, 'w')
-    for x in a.flatten().tolist():
+    l = a.flatten().tolist()
+    # l.sort()
+    for x in l:
         f.write('%2.8f\n' % x)
     f.close()
 
+
+def e():
+    import sys
+    sys.exit(0)
+
+
 def main():
     content = imread(TEST_IMAGE)
-    content_pre = np.array([preprocess(content, MEAN_PIXEL)])
+    content_pre = np.array([preprocess(content, MEAN_PIXEL)], 'float32')
     vgg_weights, _ = load_net(modelPath)
     shape = (1,) + content.shape
 
@@ -77,7 +84,6 @@ def main():
         image = tf.placeholder('float', shape=shape)
         net = net_preloaded(vgg_weights, image)
         content_features = net.eval(feed_dict={image: content_pre})
-        flattenSortAndPrint(content_features, '../python.txt')
 
         initial = tf.zeros(shape) * 0.256
         image_var = tf.Variable(initial)
@@ -85,13 +91,14 @@ def main():
 
         loss = (tf.nn.l2_loss(net - content_features) / content_features.size)
 
-        train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)
+        train_step = tf.train.AdamOptimizer(10).minimize(loss)
         sess.run(tf.global_variables_initializer())
-        train_step.run()
 
+        train_step.run()
         print("loss=%g" % loss.eval())
 
         img_out = unprocess(image_var.eval().reshape(shape[1:]), MEAN_PIXEL)
+        flattenAndPrint(image_var.eval(), '../python.txt')
         imsave(OUTPUT_IMAGE, img_out)
 
 
