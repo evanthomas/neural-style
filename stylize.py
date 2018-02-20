@@ -1,5 +1,3 @@
-# Copyright (c) 2015-2017 Anish Athalye. Released under GPLv3.
-
 import vgg
 
 import tensorflow as tf
@@ -126,12 +124,13 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)
 
         def print_progress():
+            stderr.write('\n')
             stderr.write('  content loss: %g\n' % content_loss.eval())
             stderr.write('    style loss: %g\n' % style_loss.eval())
             stderr.write('       tv loss: %g\n' % tv_loss.eval())
             stderr.write('    total loss: %g\n' % loss.eval())
 
-        iterations = 10
+        iterations = 2
         # optimization
         best_loss = float('inf')
         best = None
@@ -141,12 +140,12 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             if (print_iterations and print_iterations != 0):
                 print_progress()
             for i in range(iterations):
-                # stderr.write('Iteration %4d/%4d\n' % (i + 1, iterations))
+                stderr.write('Iteration %4d/%4d\n' % (i + 1, iterations))
                 train_step.run()
 
                 last_step = (i == iterations - 1)
-                # if last_step or (print_iterations and i % print_iterations == 0):
-                print_progress()
+                if last_step or (print_iterations and i % print_iterations == 0):
+                    print_progress()
 
                 if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
                     this_loss = loss.eval()
@@ -154,7 +153,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
                         best_loss = this_loss
                         best = image.eval()
 
-                    img_out = vgg.unprocess(image.eval().reshape(shape[1:]), vgg_mean_pixel)
+                    img_out = vgg.unprocess(best.reshape(shape[1:]), vgg_mean_pixel)
 
                     if preserve_colors and preserve_colors == True:
                         original_image = np.clip(content, 0, 255)
@@ -186,6 +185,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
 
                         # 5
                         img_out = np.array(Image.fromarray(combined_yuv, 'YCbCr').convert('RGB'))
+
 
                     yield (
                         (None if last_step else i),

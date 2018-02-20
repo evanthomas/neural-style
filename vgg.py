@@ -43,7 +43,7 @@ def net_preloaded(weights, input_image, pooling):
         elif kind == 'relu':
             current = tf.nn.relu(current)
         elif kind == 'pool':
-            current = current #_pool_layer(current, pooling)
+            current = _pool_layer(current, pooling)
         net[name] = current
 
     assert len(net) == len(VGG19_LAYERS)
@@ -69,7 +69,6 @@ def preprocess(image, mean_pixel):
 
 def unprocess(image, mean_pixel):
     return image + mean_pixel
-
 
 def flattenSortAndPrint(a, fn):
     f = open(fn, 'w')
