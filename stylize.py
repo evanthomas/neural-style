@@ -112,28 +112,26 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
                 style_gram = style_features[i][style_layer]
                 style_losses.append(style_layers_weights[style_layer] * 2 * tf.nn.l2_loss(gram - style_gram) / style_gram.size)
             style_loss += style_weight * style_blend_weights[i] * reduce(tf.add, style_losses)
-        #
-        # # total variation denoising
-        # tv_y_size = _tensor_size(image[:,1:,:,:])
-        # tv_x_size = _tensor_size(image[:,:,1:,:])
-        # tv_loss = tv_weight * 2 * (
-        #         (tf.nn.l2_loss(image[:,1:,:,:] - image[:,:shape[1]-1,:,:]) /
-        #             tv_y_size) +
-        #         (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) /
-        #             tv_x_size))
+
+        # total variation denoising
+        tv_y_size = _tensor_size(image[:,1:,:,:])
+        tv_x_size = _tensor_size(image[:,:,1:,:])
+        tv_loss = tv_weight * 2 * (
+                (tf.nn.l2_loss(image[:,1:,:,:] - image[:,:shape[1]-1,:,:]) / tv_y_size) +
+                (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) / tv_x_size))
         # overall loss
-        loss = content_loss + style_loss #+ tv_loss
+        loss = content_loss + style_loss + tv_loss
 
         # optimizer setup
         train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)
 
         def print_progress():
-            stderr.write('%f\n' % content_loss.eval())
-            # stderr.write('    style loss: %g\n' % style_loss.eval())
-            # stderr.write('       tv loss: %g\n' % tv_loss.eval())
-            # stderr.write('    total loss: %g\n' % loss.eval())
+            stderr.write('  content loss: %g\n' % content_loss.eval())
+            stderr.write('    style loss: %g\n' % style_loss.eval())
+            stderr.write('       tv loss: %g\n' % tv_loss.eval())
+            stderr.write('    total loss: %g\n' % loss.eval())
 
-        iterations = 1000
+        iterations = 10
         # optimization
         best_loss = float('inf')
         best = None
