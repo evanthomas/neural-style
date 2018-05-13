@@ -18,6 +18,7 @@ VGG19_LAYERS = (
     'conv5_1', 'relu5_1', 'conv5_2', 'relu5_2', 'conv5_3',
     'relu5_3', 'conv5_4', 'relu5_4'
 )
+# VGG19_LAYERS = ('conv1_1',)
 
 def load_net(data_path):
     data = scipy.io.loadmat(data_path)
@@ -27,6 +28,27 @@ def load_net(data_path):
     mean_pixel = np.mean(mean, axis=(0, 1))
     weights = data['layers'][0]
     return weights, mean_pixel
+
+# def net_preloaded(weights, input_image, pooling):
+#     net = {}
+#     current = input_image
+#     for i, name in enumerate(VGG19_LAYERS):
+#         kind = name[:4]
+#         if kind == 'conv':
+#             kernels, bias = weights[i][0][0][0][0]
+#             # matconvnet: weights are [width, height, in_channels, out_channels]
+#             # tensorflow: weights are [height, width, in_channels, out_channels]
+#             kernels = np.transpose(kernels, (1, 0, 2, 3))
+#             bias = bias.reshape(-1)
+#             current = _conv_layer(current, kernels, bias)
+#         elif kind == 'relu':
+#             current = tf.nn.relu(current)
+#         elif kind == 'pool':
+#             current = _pool_layer(current, pooling)
+#         net[name] = current
+#
+#     # assert len(net) == len(VGG19_LAYERS)
+#     return net
 
 def net_preloaded(weights, input_image, pooling):
     net = {}

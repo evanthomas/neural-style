@@ -120,6 +120,13 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         # overall loss
         loss = content_loss + style_loss + tv_loss
 
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            style_loss.eval()
+            sw = tf.summary.FileWriter('../pythonLogDir', graph=sess.graph)
+            import sys
+            sys.exit(0)
+
         # optimizer setup
         train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)
 
@@ -130,7 +137,6 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             stderr.write('       tv loss: %g\n' % tv_loss.eval())
             stderr.write('    total loss: %g\n' % loss.eval())
 
-        iterations = 2
         # optimization
         best_loss = float('inf')
         best = None
@@ -141,7 +147,8 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
                 print_progress()
             for i in range(iterations):
                 stderr.write('Iteration %4d/%4d\n' % (i + 1, iterations))
-                train_step.run()
+                sess.run(train_step)#, options=tf.RunOptions(report_tensor_allocations_upon_oom=True))
+                # train_step.run()
 
                 last_step = (i == iterations - 1)
                 if last_step or (print_iterations and i % print_iterations == 0):
