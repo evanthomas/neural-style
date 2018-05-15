@@ -49,7 +49,7 @@ with g.as_default(), g.device('/cpu:0'), tf.Session(config=tf.ConfigProto(log_de
     contentFeatures = net['conv1_1'].eval(feed_dict={pl: contentImage})
 
 initialImage = tf.zeros(shape)
-imageVar = tf.Variable(initialImage)
+imageVar = tf.Variable(initialImage, name="imageDuck")
 net = net_preloaded(vgg_weights, imageVar)
 
 cl = contentLoss(contentFeatures, net)
