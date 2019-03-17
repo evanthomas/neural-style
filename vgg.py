@@ -19,13 +19,24 @@ VGG19_LAYERS = (
     'relu5_3', 'conv5_4', 'relu5_4'
 )
 
-def load_net(data_path):
+def load_net(data_path, data_type):
     data = scipy.io.loadmat(data_path)
     if not all(i in data for i in ('layers', 'classes', 'normalization')):
         raise ValueError("You're using the wrong VGG19 data. Please follow the instructions in the README to download the correct data.")
+
     mean = data['normalization'][0][0][0]
-    mean_pixel = np.mean(mean, axis=(0, 1))
+    mean_pixel = np.mean(mean, axis=(0, 1)).astype('float16')
+
     weights = data['layers'][0]
+    if data_type != 'float32':
+        for i, name in enumerate(VGG19_LAYERS):
+            kind = name[:4]
+            if kind == 'conv':
+                kernels, bias = weights[i][0][0][0][0]
+                kernels = kernels.astype(data_type)
+                bias = bias.astype(data_type)
+                weights[i][0][0][0][0] = kernels, bias
+
     return weights, mean_pixel
 
 def net_preloaded(weights, input_image, pooling):

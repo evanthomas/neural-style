@@ -18,7 +18,7 @@ except NameError:
 
 def stylize(network, initial, initial_noiseblend, content, styles, preserve_colors, iterations,
         content_weight, content_weight_blend, style_weight, style_layer_weight_exp, style_blend_weights, tv_weight,
-        learning_rate, beta1, beta2, epsilon, pooling,
+        learning_rate, beta1, beta2, epsilon, pooling, data_type,
         print_iterations=None, checkpoint_iterations=None):
     """
     Stylize images.
@@ -32,7 +32,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     content_features = {}
     style_features = [{} for _ in styles]
 
-    vgg_weights, vgg_mean_pixel = vgg.load_net(network)
+    vgg_weights, vgg_mean_pixel = vgg.load_net(network, data_type)
 
     layer_weight = 1.0
     style_layers_weights = {}
@@ -50,7 +50,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     # compute content features in feedforward mode
     g = tf.Graph()
     with g.as_default(), g.device('/cpu:0'), tf.Session() as sess:
-        image = tf.placeholder('float', shape=shape)
+        image = tf.placeholder(data_type, shape=shape)
         net = vgg.net_preloaded(vgg_weights, image, pooling)
         content_pre = np.array([vgg.preprocess(content, vgg_mean_pixel)])
         for layer in CONTENT_LAYERS:
@@ -60,7 +60,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     for i in range(len(styles)):
         g = tf.Graph()
         with g.as_default(), g.device('/cpu:0'), tf.Session() as sess:
-            image = tf.placeholder('float', shape=style_shapes[i])
+            image = tf.placeholder(data_type, shape=style_shapes[i])
             net = vgg.net_preloaded(vgg_weights, image, pooling)
             style_pre = np.array([vgg.preprocess(styles[i], vgg_mean_pixel)])
             for layer in STYLE_LAYERS:
@@ -74,12 +74,10 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     # make stylized image using backpropogation
     with tf.Graph().as_default():
         if initial is None:
-            noise = np.random.normal(size=shape, scale=np.std(content) * 0.1)
-            initial = tf.zeros(shape) * 0.256
+            initial = tf.zeros(shape, dtype=data_type) * 0.256
         else:
             initial = np.array([vgg.preprocess(initial, vgg_mean_pixel)])
-            initial = initial.astype('float32')
-            noise = np.random.normal(size=shape, scale=np.std(content) * 0.1)
+            initial = initial.astype(data_type)
             initial = (initial) * initial_content_noise_coeff + (tf.random_normal(shape) * 0.256) * (1.0 - initial_content_noise_coeff)
         image = tf.Variable(initial)
         net = vgg.net_preloaded(vgg_weights, image, pooling)
@@ -130,7 +128,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             stderr.write('       tv loss: %g\n' % tv_loss.eval())
             stderr.write('    total loss: %g\n' % loss.eval())
 
-        iterations = 2
+
         # optimization
         best_loss = float('inf')
         best = None
@@ -140,7 +138,6 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             if (print_iterations and print_iterations != 0):
                 print_progress()
             for i in range(iterations):
-                stderr.write('Iteration %4d/%4d\n' % (i + 1, iterations))
                 train_step.run()
 
                 last_step = (i == iterations - 1)

@@ -24,8 +24,10 @@ BETA2 = 0.999
 EPSILON = 1e-08
 STYLE_SCALE = 1.0
 ITERATIONS = 1000
+PRINT_ITERATIONS = 100
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 POOLING = 'max'
+DATA_TYPE = 'float32'
 
 def build_parser():
     parser = ArgumentParser()
@@ -44,7 +46,7 @@ def build_parser():
             metavar='ITERATIONS', default=ITERATIONS)
     parser.add_argument('--print-iterations', type=int,
             dest='print_iterations', help='statistics printing frequency',
-            metavar='PRINT_ITERATIONS')
+            metavar='PRINT_ITERATIONS', default=PRINT_ITERATIONS)
     parser.add_argument('--checkpoint-output',
             dest='checkpoint_output', help='checkpoint output format, e.g. output%%s.jpg',
             metavar='OUTPUT')
@@ -58,6 +60,10 @@ def build_parser():
             dest='style_scales',
             nargs='+', help='one or more style scales',
             metavar='STYLE_SCALE')
+    parser.add_argument('--data-type', type=str,
+            dest='data_type',
+            help='float32 or float16',
+            metavar='DATA_TYPE', default=DATA_TYPE)
     parser.add_argument('--network',
             dest='network', help='path to network parameters (default %(default)s)',
             metavar='VGG_PATH', default=VGG_PATH)
@@ -112,8 +118,8 @@ def main():
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
-    content_image = imread(options.content)
-    style_images = [imread(style) for style in options.styles]
+    content_image = imread(options.content, options.data_type)
+    style_images = [imread(style, options.data_type) for style in options.styles]
 
     width = options.width
     if width is not None:
@@ -173,6 +179,7 @@ def main():
         beta2=options.beta2,
         epsilon=options.epsilon,
         pooling=options.pooling,
+        data_type=options.data_type,
         print_iterations=options.print_iterations,
         checkpoint_iterations=options.checkpoint_iterations
     ):
@@ -187,8 +194,8 @@ def main():
             imsave(output_file, combined_rgb)
 
 
-def imread(path):
-    img = scipy.misc.imread(path).astype(np.float)
+def imread(path, data_type):
+    img = scipy.misc.imread(path).astype(data_type)
     if len(img.shape) == 2:
         # grayscale
         img = np.dstack((img,img,img))
