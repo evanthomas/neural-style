@@ -118,8 +118,8 @@ def main():
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
-    content_image = imread(options.content, options.data_type)
-    style_images = [imread(style, options.data_type) for style in options.styles]
+    content_image = imread(options.content)
+    style_images = [imread(style) for style in options.styles]
 
     width = options.width
     if width is not None:
@@ -194,8 +194,8 @@ def main():
             imsave(output_file, combined_rgb)
 
 
-def imread(path, data_type):
-    img = scipy.misc.imread(path).astype(data_type)
+def imread(path):
+    img = scipy.misc.imread(path)
     if len(img.shape) == 2:
         # grayscale
         img = np.dstack((img,img,img))
@@ -217,6 +217,8 @@ def flattenSortAndPrint(a, fn):
     for x in l:
         f.write('%2.8f\n' % x)
     f.close()
+
+
 
 if __name__ == '__main__':
     main()

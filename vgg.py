@@ -19,7 +19,8 @@ VGG19_LAYERS = (
     'relu5_3', 'conv5_4', 'relu5_4'
 )
 
-def load_net(data_path, data_type):
+
+def load_net(data_path):
     data = scipy.io.loadmat(data_path)
     if not all(i in data for i in ('layers', 'classes', 'normalization')):
         raise ValueError("You're using the wrong VGG19 data. Please follow the instructions in the README to download the correct data.")
@@ -28,16 +29,9 @@ def load_net(data_path, data_type):
     mean_pixel = np.mean(mean, axis=(0, 1)).astype('float16')
 
     weights = data['layers'][0]
-    if data_type != 'float32':
-        for i, name in enumerate(VGG19_LAYERS):
-            kind = name[:4]
-            if kind == 'conv':
-                kernels, bias = weights[i][0][0][0][0]
-                kernels = kernels.astype(data_type)
-                bias = bias.astype(data_type)
-                weights[i][0][0][0][0] = kernels, bias
 
     return weights, mean_pixel
+
 
 def net_preloaded(weights, input_image, pooling):
     net = {}
@@ -60,6 +54,7 @@ def net_preloaded(weights, input_image, pooling):
     assert len(net) == len(VGG19_LAYERS)
     return net
 
+
 def _conv_layer(input, weights, bias):
     conv = tf.nn.conv2d(input, tf.constant(weights), strides=(1, 1, 1, 1),
             padding='SAME')
@@ -74,12 +69,14 @@ def _pool_layer(input, pooling):
         return tf.nn.max_pool(input, ksize=(1, 2, 2, 1), strides=(1, 2, 2, 1),
                 padding='SAME')
 
+
 def preprocess(image, mean_pixel):
     return image - mean_pixel
 
 
 def unprocess(image, mean_pixel):
     return image + mean_pixel
+
 
 def flattenSortAndPrint(a, fn):
     f = open(fn, 'w')
@@ -107,6 +104,7 @@ def dumpKernels(kernels, file):
             f.write('\n\n\n')
 
     f.close()
+
 
 def e():
     import sys

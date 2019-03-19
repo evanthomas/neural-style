@@ -2,10 +2,10 @@ import vgg
 
 import tensorflow as tf
 import numpy as np
-
 from sys import stderr
-
 from PIL import Image
+import time
+
 
 CONTENT_LAYERS = ('relu4_2', 'relu5_2')
 STYLE_LAYERS = ('relu1_1', 'relu2_1', 'relu3_1', 'relu4_1', 'relu5_1')
@@ -32,7 +32,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     content_features = {}
     style_features = [{} for _ in styles]
 
-    vgg_weights, vgg_mean_pixel = vgg.load_net(network, data_type)
+    vgg_weights, vgg_mean_pixel = vgg.load_net(network)
 
     layer_weight = 1.0
     style_layers_weights = {}
@@ -50,7 +50,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     # compute content features in feedforward mode
     g = tf.Graph()
     with g.as_default(), g.device('/cpu:0'), tf.Session() as sess:
-        image = tf.placeholder(data_type, shape=shape)
+        image = tf.placeholder('float32', shape=shape)
         net = vgg.net_preloaded(vgg_weights, image, pooling)
         content_pre = np.array([vgg.preprocess(content, vgg_mean_pixel)])
         for layer in CONTENT_LAYERS:
@@ -60,7 +60,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     for i in range(len(styles)):
         g = tf.Graph()
         with g.as_default(), g.device('/cpu:0'), tf.Session() as sess:
-            image = tf.placeholder(data_type, shape=style_shapes[i])
+            image = tf.placeholder('float32', shape=style_shapes[i])
             net = vgg.net_preloaded(vgg_weights, image, pooling)
             style_pre = np.array([vgg.preprocess(styles[i], vgg_mean_pixel)])
             for layer in STYLE_LAYERS:
@@ -74,16 +74,17 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     # make stylized image using backpropogation
     with tf.Graph().as_default():
         if initial is None:
-            initial = tf.zeros(shape, dtype=data_type) * 0.256
+            # initial = tf.random_normal(shape, dtype='float32') * 0.256
+            initial = tf.zeros(shape, dtype='float32') * 0.256
         else:
             initial = np.array([vgg.preprocess(initial, vgg_mean_pixel)])
-            initial = initial.astype(data_type)
+            initial = initial.astype('float32')
             initial = (initial) * initial_content_noise_coeff + (tf.random_normal(shape) * 0.256) * (1.0 - initial_content_noise_coeff)
         image = tf.Variable(initial)
         net = vgg.net_preloaded(vgg_weights, image, pooling)
 
         # content loss
-        content_layers_weights = {}
+        content_layers_weights = dict()
         content_layers_weights['relu4_2'] = content_weight_blend
         content_layers_weights['relu5_2'] = 1.0 - content_weight_blend
 
@@ -115,8 +116,10 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
         tv_loss = tv_weight * 2 * (
                 (tf.nn.l2_loss(image[:,1:,:,:] - image[:,:shape[1]-1,:,:]) / tv_y_size) +
                 (tf.nn.l2_loss(image[:,:,1:,:] - image[:,:,:shape[2]-1,:]) / tv_x_size))
+
         # overall loss
         loss = content_loss + style_loss + tv_loss
+        loss = tf.cast(loss/1e4, 'float16')
 
         # optimizer setup
         train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)
@@ -128,11 +131,14 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             stderr.write('       tv loss: %g\n' % tv_loss.eval())
             stderr.write('    total loss: %g\n' % loss.eval())
 
+        config = tf.ConfigProto()
+        # config.graph_options.optimizer_options.global_jit_level = tf.OptimizerOptions.ON_1
+        start = time.time()
 
         # optimization
         best_loss = float('inf')
         best = None
-        with tf.Session() as sess:
+        with tf.Session(config=config) as sess:
             sess.run(tf.global_variables_initializer())
             stderr.write('Optimization started...\n')
             if (print_iterations and print_iterations != 0):
@@ -145,6 +151,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
                     print_progress()
 
                 if (checkpoint_iterations and i % checkpoint_iterations == 0) or last_step:
+                    stderr.write('\nElapsed time: ' + str(time.time()-start) + '\n')
                     this_loss = loss.eval()
                     if this_loss < best_loss:
                         best_loss = this_loss
@@ -194,8 +201,10 @@ def _tensor_size(tensor):
     from operator import mul
     return reduce(mul, (d.value for d in tensor.get_shape()), 1)
 
+
 def rgb2gray(rgb):
     return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+
 
 def gray2rgb(gray):
     w, h = gray.shape
@@ -212,6 +221,20 @@ def flattenSortAndPrint(a, fn):
         f.write('%2.8f\n' % x)
     f.close()
 
+
 def e():
     import sys
     sys.exit(0)
+
+
+def cast_weights_to_fp16(weights):
+    import vgg
+    for i, name in enumerate(vgg.VGG19_LAYERS):
+        kind = name[:4]
+        if kind == 'conv':
+            kernels, bias = weights[i][0][0][0][0]
+            kernels = kernels.astype('float16')
+            bias = bias.astype('float16')
+            weights[i][0][0][0][0] = kernels, bias
+
+    return weights
