@@ -78,7 +78,6 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
             initial = tf.zeros(shape, dtype='float32') * 0.256
         else:
             initial = np.array([vgg.preprocess(initial, vgg_mean_pixel)])
-            initial = initial.astype('float32')
             initial = (initial) * initial_content_noise_coeff + (tf.random_normal(shape) * 0.256) * (1.0 - initial_content_noise_coeff)
         image = tf.Variable(initial)
         net = vgg.net_preloaded(vgg_weights, image, pooling)
@@ -119,7 +118,6 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
 
         # overall loss
         loss = content_loss + style_loss + tv_loss
-        loss = tf.cast(loss/1e4, 'float16')
 
         # optimizer setup
         train_step = tf.train.AdamOptimizer(learning_rate, beta1, beta2, epsilon).minimize(loss)

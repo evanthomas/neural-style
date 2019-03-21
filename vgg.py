@@ -26,7 +26,7 @@ def load_net(data_path):
         raise ValueError("You're using the wrong VGG19 data. Please follow the instructions in the README to download the correct data.")
 
     mean = data['normalization'][0][0][0]
-    mean_pixel = np.mean(mean, axis=(0, 1)).astype('float16')
+    mean_pixel = np.mean(mean, axis=(0, 1))
 
     weights = data['layers'][0]
 
