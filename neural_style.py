@@ -111,9 +111,9 @@ def build_parser():
     return parser
 
 
-def main():
+def main(argv):
     parser = build_parser()
-    options = parser.parse_args()
+    options = parser.parse_args(args=argv)
 
     if not os.path.isfile(options.network):
         parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
@@ -221,4 +221,5 @@ def flattenSortAndPrint(a, fn):
 
 
 if __name__ == '__main__':
-    main()
+    import sys
+    main(sys.argv)
