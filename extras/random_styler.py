@@ -5,20 +5,24 @@
 import os
 import random
 import neural_style
+import vgg
 from argparse import ArgumentParser
 
 
 def build_parser():
     parser = ArgumentParser()
     parser.add_argument('--input-dir',
-            dest='input_dir', help='directory of input images',
-            required=True)
+                        dest='input_dir',
+                        help='directory of input images',
+                        required=True)
     parser.add_argument('--output-dir',
-            dest='output_dir', help='directory of output images',
-            required=True)
+                        dest='output_dir',
+                        help='directory of output images',
+                        required=True)
     parser.add_argument('--count',
-            dest='count', help='number of images to produce (default infinite)',
-            required=False)
+                        dest='count',
+                        help='number of images to produce (default infinite)',
+                        required=False)
     return parser
 
 
@@ -59,14 +63,16 @@ def main(argv):
         content_file = os.path.join(input_dir, content_file)
         style_file = os.path.join(input_dir, style_file)
 
+        neural_style_home = os.getenv('NEURAL_STYLE_HOME')
         argv = [
-            '--network',  'imagenet-vgg-verydeep-19.mat',
             '--content',  content_file,
             '--styles', style_file,
             '--output', output_file
             ]
 
-        neural_style.main(argv)
+        vgg_weights, vgg_mean_pixel = vgg.load_net(os.path.join(neural_style_home, 'imagenet-vgg-verydeep-19.mat'))
+
+        neural_style.main(argv, vgg_weights, vgg_mean_pixel)
 
         if count is not None:
             count = count - 1

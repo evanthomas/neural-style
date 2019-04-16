@@ -12,6 +12,7 @@ import math
 from argparse import ArgumentParser
 
 from PIL import Image
+import vgg
 
 # default arguments
 CONTENT_WEIGHT = 5e0
@@ -28,7 +29,7 @@ ITERATIONS = 1000
 PRINT_ITERATIONS = 100
 VGG_PATH = 'imagenet-vgg-verydeep-19.mat'
 POOLING = 'max'
-
+FIRST_PASS_SIZE = 500
 
 def build_parser():
     parser = ArgumentParser()
@@ -112,12 +113,12 @@ def build_parser():
     return parser
 
 
-def main(argv):
+def main(argv, vgg_weights, vgg_mean_pixel):
     parser = build_parser()
     options = parser.parse_args(args=argv)
 
-    if not os.path.isfile(options.network):
-        parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
+    # if not os.path.isfile(options.network):
+    #     parser.error("Network %s does not exist. (Did you forget to download it?)" % options.network)
 
     content_image = imread(options.content)
     style_images = [imread(style) for style in options.styles]
@@ -162,20 +163,33 @@ def main(argv):
                      "parameter must contain `%s` (e.g. `foo%s.jpg`)")
 
     original_width, original_height = content_image.shape[1], content_image.shape[0]
-    resized_content_image = imresize(content_image, 1000)
-    resized_style_images = list(map(lambda im: imresize(im, 1000), style_images))
-    first_pass = apply_style(options, initial, resized_content_image, resized_style_images, style_blend_weights, options.iterations)
-    imsave(options.output, first_pass)
+    resized_content_image = imresize(content_image, FIRST_PASS_SIZE)
+    resized_style_images = list(map(lambda im: imresize(im, FIRST_PASS_SIZE), style_images))
+    first_pass = apply_style(options,
+                             initial,
+                             resized_content_image,
+                             resized_style_images,
+                             style_blend_weights,
+                             options.iterations,
+                             vgg_weights,
+                             vgg_mean_pixel)
 
     second_pass = skimage.transform.resize(first_pass, (original_height, original_width), anti_aliasing=True, preserve_range=True)
-    final_img = apply_style(options, second_pass, content_image, style_images, style_blend_weights, int(float(options.iterations)/2.5))
+    final_img = apply_style(options,
+                            second_pass,
+                            content_image,
+                            style_images,
+                            style_blend_weights,
+                            int(float(options.iterations)/2.5),
+                            vgg_weights,
+                            vgg_mean_pixel)
 
     imsave(options.output, final_img)
 
 
-def apply_style(options, initial, content, styles, style_weights, iterations):
+def apply_style(options, initial, content, styles, style_weights, iterations, vgg_weights, vgg_mean_pixel):
     for iteration, image in stylize(
-        network=options.network,
+        network=None,
         initial=initial,
         initial_noiseblend=options.initial_noiseblend,
         content=content,
@@ -193,6 +207,8 @@ def apply_style(options, initial, content, styles, style_weights, iterations):
         beta2=options.beta2,
         epsilon=options.epsilon,
         pooling=options.pooling,
+        vgg_mean_pixel=vgg_mean_pixel,
+        vgg_weights=vgg_weights,
         print_iterations=options.print_iterations,
         checkpoint_iterations=options.checkpoint_iterations
     ):

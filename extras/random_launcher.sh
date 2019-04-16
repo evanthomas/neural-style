@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-. ns-env/bin/activate
+export NEURAL_STYLE_HOME=/home/evan/neurosim/neural-style
 
-PYTHONPATH=/home/evan/neurosim/neural_style:$PYTHONPATH
-python random_styler.py --input-dir /home/evan/images/inputs --output-dir /home/evan/images/outputs
+. $NEURAL_STYLE_HOME/ns-env/bin/activate
+
+export PYTHONPATH=$NEURAL_STYLE_HOME:$PYTHONPATH
+python -u random_styler.py --input-dir /data/images/inputs-2048 --output-dir /home/evan/neurosim/images/outputs
