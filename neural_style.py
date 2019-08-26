@@ -113,7 +113,7 @@ def build_parser():
     return parser
 
 
-def main(argv, vgg_weights, vgg_mean_pixel):
+def main(argv):
     parser = build_parser()
     options = parser.parse_args(args=argv)
 
@@ -162,6 +162,9 @@ def main(argv, vgg_weights, vgg_mean_pixel):
         parser.error("To save intermediate images, the checkpoint output "
                      "parameter must contain `%s` (e.g. `foo%s.jpg`)")
 
+    network = options.network
+    vgg_weights, vgg_mean_pixel = vgg.load_net(network)
+
     original_width, original_height = content_image.shape[1], content_image.shape[0]
     resized_content_image = imresize(content_image, FIRST_PASS_SIZE)
     resized_style_images = list(map(lambda im: imresize(im, FIRST_PASS_SIZE), style_images))
@@ -171,6 +174,7 @@ def main(argv, vgg_weights, vgg_mean_pixel):
                              resized_style_images,
                              style_blend_weights,
                              options.iterations,
+                             network,
                              vgg_weights,
                              vgg_mean_pixel)
 
@@ -181,15 +185,16 @@ def main(argv, vgg_weights, vgg_mean_pixel):
                             style_images,
                             style_blend_weights,
                             int(float(options.iterations)/2.5),
+                            network,
                             vgg_weights,
                             vgg_mean_pixel)
 
     imsave(options.output, final_img)
 
 
-def apply_style(options, initial, content, styles, style_weights, iterations, vgg_weights, vgg_mean_pixel):
+def apply_style(options, initial, content, styles, style_weights, iterations, network, vgg_weights, vgg_mean_pixel):
     for iteration, image in stylize(
-        network=None,
+        network=network,
         initial=initial,
         initial_noiseblend=options.initial_noiseblend,
         content=content,

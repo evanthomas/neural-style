@@ -1,4 +1,5 @@
 import os
+import itertools
 
 OUTPUT = "jobs.sh"
 output_dir = '/home/evan/neurosim/images/outputs'
@@ -42,10 +43,13 @@ outputs = os.listdir(output_dir)
 #     ('PB290381.jpg', 'IMG_1585.jpg'),
 #     ('PC260008.jpg', 'DSC_9311.jpg')
 # ]
-target_styles = [
-    ('DSC_4010.jpg', 'P1030440.jpg')
-]
+# target_styles = [
+#     ('DSC_4010.jpg', 'P1030440.jpg')
+# ]
 
+content_images = os.listdir(target_dir)
+style_images = os.listdir(style_dir)
+target_styles = list(itertools.product(content_images, style_images))
 
 scales = [0.5, 1]
 
@@ -56,24 +60,23 @@ f.write('export CUDA_VISIBLE_DEVICES=0\n\n')
 cnt = 0
 for (target, style) in target_styles:
     for scale in scales:
-        for sequence_number in range(20, 40):
-            t, _ = os.path.splitext(target)
-            s, _ = os.path.splitext(style)
+        t, _ = os.path.splitext(target)
+        s, _ = os.path.splitext(style)
 
-            outputName = t + '__' + s + '__' + str(scale) + '__' + str(sequence_number) + '.jpg'
-            if outputName in outputs:
-                pass
-            else:
-                cnt = cnt + 1
-                full_output_name = os.path.join(output_dir, outputName)
-                full_target_name = os.path.join(target_dir, target)
-                full_style_name = os.path.join(style_dir, style)
-                js = "/home/evan/neurosim/neural-style/extras/specific_launcher.sh \"{target}\" \"{style}\" {scale} \"{full_output_name}\"\n"\
-                    .format(style=full_style_name,
-                            target=full_target_name,
-                            scale=scale,
-                            full_output_name=full_output_name)
-                f.write(js)
+        outputName = t + '__' + s + '__' + str(scale) + '.jpg'
+        if outputName in outputs:
+            pass
+        else:
+            cnt = cnt + 1
+            full_output_name = os.path.join(output_dir, outputName)
+            full_target_name = os.path.join(target_dir, target)
+            full_style_name = os.path.join(style_dir, style)
+            js = "/home/evan/neurosim/neural-style/extras/specific_launcher.sh \"{target}\" \"{style}\" {scale} \"{full_output_name}\"\n"\
+                .format(style=full_style_name,
+                        target=full_target_name,
+                        scale=scale,
+                        full_output_name=full_output_name)
+            f.write(js)
 
 f.close()
 

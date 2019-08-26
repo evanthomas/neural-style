@@ -56,7 +56,7 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     # compute style features in feedforward mode
     for i in range(len(styles)):
         g = tf.Graph()
-        with g.as_default(), tf.Session() as sess:
+        with g.as_default(), tf.Session() as sess: #, g.device('/cpu:0')
             image = tf.placeholder('float32', shape=style_shapes[i])
             net = vgg.net_preloaded(vgg_weights, image, pooling)
             style_pre = np.array([vgg.preprocess(styles[i], vgg_mean_pixel)])
@@ -71,8 +71,8 @@ def stylize(network, initial, initial_noiseblend, content, styles, preserve_colo
     # make stylized image using backpropogation
     with tf.Graph().as_default():
         if initial is None:
-            initial = tf.random_normal(shape, dtype='float32') * 0.256
-            # initial = tf.zeros(shape, dtype='float32') * 0.256
+            # initial = tf.random_normal(shape, dtype='float32') * 0.256
+            initial = tf.zeros(shape, dtype='float32') * 0.256
         else:
             initial = np.array([vgg.preprocess(initial, vgg_mean_pixel)])
             initial = (initial) * initial_content_noise_coeff + (tf.random_normal(shape) * 0.256) * (

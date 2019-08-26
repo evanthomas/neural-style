@@ -5,8 +5,9 @@
 import os
 import random
 import neural_style
-import vgg
 from argparse import ArgumentParser
+import time
+import multiprocessing
 
 
 def build_parser():
@@ -49,6 +50,8 @@ def main(argv):
     if count is not None:
         count = int(count)
 
+    neural_style_home = os.getenv('NEURAL_STYLE_HOME')
+
     while not done:
         content_file = random.choice(input_files)
         style_file = random.choice(input_files)
@@ -63,16 +66,18 @@ def main(argv):
         content_file = os.path.join(input_dir, content_file)
         style_file = os.path.join(input_dir, style_file)
 
-        neural_style_home = os.getenv('NEURAL_STYLE_HOME')
         argv = [
+            '--network', os.path.join(neural_style_home, 'imagenet-vgg-verydeep-19.mat'),
             '--content',  content_file,
             '--styles', style_file,
             '--output', output_file
             ]
 
-        vgg_weights, vgg_mean_pixel = vgg.load_net(os.path.join(neural_style_home, 'imagenet-vgg-verydeep-19.mat'))
-
-        neural_style.main(argv, vgg_weights, vgg_mean_pixel)
+        start = time.time()
+        p = multiprocessing.Process(target=neural_style.main, args=(argv,))
+        p.start()
+        p.join()
+        sys.stderr.write('Total time to create ' + output_file + ' was ' + str(time.time()-start) + 's\n')
 
         if count is not None:
             count = count - 1

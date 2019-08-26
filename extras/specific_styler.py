@@ -5,7 +5,7 @@
 import os
 import neural_style
 from argparse import ArgumentParser
-
+import vgg
 
 def build_parser():
     parser = ArgumentParser()
@@ -26,6 +26,8 @@ def build_parser():
 
 def create_if_needed(fn):
     dir = os.path.dirname(fn)
+    if dir == '':
+        return
     if not os.path.exists(dir):
         os.mkdir(dir)
 
@@ -40,15 +42,20 @@ def main(argv):
     output_filename = options.output
     create_if_needed(output_filename)
 
+    neural_style_home = os.getenv('NEURAL_STYLE_HOME')
+    if neural_style_home is None:
+        print('NEURAL_STYLE_HOME is not set')
+      
+    vgg_weights, vgg_mean_pixel = vgg.load_net(os.path.join(neural_style_home, 'imagenet-vgg-verydeep-19.mat'))
+
     argv = [
-        '--network', '/home/evan/neurosim/neural-style/imagenet-vgg-verydeep-19.mat',
         '--content', content,
         '--styles', style,
         '--output', output_filename,
         '--style-scales', scale
         ]
 
-    neural_style.main(argv)
+    neural_style.main(argv, vgg_weights, vgg_mean_pixel)
 
 
 if __name__ == '__main__':
